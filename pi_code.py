@@ -36,31 +36,41 @@ def get_motor(hat_id, motor_id):
     return hat.stepper1 if motor_id == 1 else hat.stepper2
 
 def rotate_motor(hat_id, motor_id, steps, direction):
-    motor = get_motor(hat_id, motor_id)
-    step_direction = 1 if direction == 'cw' else -1
-    
-    for _ in range(steps):
-        motor.onestep(direction=step_direction)
-        time.sleep(0.01)  # Small delay between steps
-    
-    motor.release()  # Release motor to prevent overheating
-    return "OK"
+    try:
+        motor = get_motor(hat_id, motor_id)
+        step_direction = 1 if direction == 'cw' else -1
+        
+        for _ in range(steps):
+            motor.onestep(direction=step_direction)
+            time.sleep(0.01)  # Small delay between steps
+        
+        motor.release()  # Release motor to prevent overheating
+        return "OK"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+print("Motor control system ready...")
 
 while True:
-    if ser.in_waiting:
-        command = ser.readline().decode().strip()
-        parts = command.split(',')
-        
-        try:
-            if parts[0] == 'ROTATE':
-                hat_id = int(parts[1])
-                motor_id = int(parts[2])
-                steps = int(parts[3])
-                direction = parts[4]
-                
-                result = rotate_motor(hat_id, motor_id, steps, direction)
-                ser.write(f"{result}\n".encode())
-            else:
-                ser.write(b"Invalid command\n")
-        except Exception as e:
-            ser.write(f"Error: {str(e)}\n".encode())
+    try:
+        if ser.in_waiting:
+            command = ser.readline().decode().strip()
+            parts = command.split(',')
+            
+            try:
+                if parts[0] == 'ROTATE':
+                    hat_id = int(parts[1])
+                    motor_id = int(parts[2])
+                    steps = int(parts[3])
+                    direction = parts[4]
+                    
+                    result = rotate_motor(hat_id, motor_id, steps, direction)
+                    ser.write(f"{result}\n".encode())
+                else:
+                    ser.write(b"Invalid command\n")
+            except Exception as e:
+                ser.write(f"Error: {str(e)}\n".encode())
+    except serial.SerialException as e:
+        print(f"Serial connection error: {e}")
+        time.sleep(5)  # Wait before retrying
+        continue
